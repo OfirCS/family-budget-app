@@ -341,7 +341,9 @@ app.get('/api/budgets', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
+const HOST = '0.0.0.0'; // Railway requires binding to 0.0.0.0
+
+app.listen(PORT, HOST, () => {
   console.log('\n🤖 Family Budget Bot running on port ' + PORT);
   console.log('📱 Ready to manage your family budget!');
   console.log('🔒 Security:', ALLOWED_NUMBERS.length > 0 ? 'Whitelist enabled' : 'Open access');
