@@ -340,6 +340,66 @@ app.get('/api/budgets', (req, res) => {
   res.json(data.budgets);
 });
 
+app.post('/api/budget', (req, res) => {
+  const { category, limit, month } = req.body;
+  if (!category || !limit || !month) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const data = loadData();
+
+  // Check if budget exists for this category and month
+  const existingIndex = data.budgets.findIndex(
+    b => b.category === category && b.month === month
+  );
+
+  if (existingIndex >= 0) {
+    // Update existing budget
+    data.budgets[existingIndex].limit = parseFloat(limit);
+  } else {
+    // Create new budget
+    const newBudget = {
+      id: Date.now().toString(),
+      category,
+      limit: parseFloat(limit),
+      month
+    };
+    data.budgets.push(newBudget);
+  }
+
+  saveData(data);
+  res.json({ success: true, budgets: data.budgets });
+});
+
+app.delete('/api/budget/:id', (req, res) => {
+  const data = loadData();
+  data.budgets = data.budgets.filter(b => b.id !== req.params.id);
+  saveData(data);
+  res.json({ success: true });
+});
+
+app.get('/api/users', (req, res) => {
+  const data = loadData();
+  res.json(data.users);
+});
+
+app.post('/api/user', (req, res) => {
+  const { name, color } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const data = loadData();
+  const newUser = {
+    id: Date.now().toString(),
+    name,
+    color: color || '#' + Math.floor(Math.random()*16777215).toString(16)
+  };
+  data.users.push(newUser);
+  saveData(data);
+  res.json({ success: true, user: newUser });
+});
+
 const PORT = process.env.PORT || 3002;
 const HOST = '0.0.0.0'; // Railway requires binding to 0.0.0.0
 
