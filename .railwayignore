@@ -1,0 +1,13 @@
+src/
+public/
+.env.local
+.env.*.local
+dist/
+build/
+node_modules/
+*.md
+.git
+.gitignore
+.vscode
+.DS_Store
+npm-debug.log

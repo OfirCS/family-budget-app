@@ -1,0 +1,73 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Mom",
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "2",
+      "name": "Dad",
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "3",
+      "name": "Child 1",
+      "color": "#45B7D1"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "1760560868711",
+      "userId": "1",
+      "amount": 20,
+      "category": "Other",
+      "description": "at walmart",
+      "date": "2025-10-15"
+    },
+    {
+      "id": "1760561274457",
+      "userId": "1",
+      "amount": 150,
+      "category": "Other",
+      "description": "on claude code",
+      "date": "2025-10-15"
+    },
+    {
+      "id": "1760561294562",
+      "userId": "1",
+      "amount": 500,
+      "category": "Other",
+      "description": "on Costco groceires",
+      "date": "2025-10-15"
+    }
+  ],
+  "budgets": [
+    {
+      "id": "1",
+      "category": "Groceries",
+      "limit": 500,
+      "month": "2025-10"
+    },
+    {
+      "id": "2",
+      "category": "Transportation",
+      "limit": 200,
+      "month": "2025-10"
+    },
+    {
+      "id": "3",
+      "category": "Entertainment",
+      "limit": 150,
+      "month": "2025-10"
+    },
+    {
+      "id": "4",
+      "category": "Utilities",
+      "limit": 300,
+      "month": "2025-10"
+    }
+  ],
+  "selectedUserId": "1",
+  "selectedMonth": "2025-10"
+}
