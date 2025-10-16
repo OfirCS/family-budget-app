@@ -112,11 +112,11 @@ async function askClaude(message) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 300,
+        model: 'claude-3-5-haiku-20241022', // Cheapest model - perfect for quick responses
+        max_tokens: 150, // Reduced for cost efficiency
         messages: [{
           role: 'user',
-          content: `You are a helpful family budget assistant. Keep responses brief (2-3 sentences max). User asked: "${message}"\n\nProvide a friendly, concise response about budgeting or finances.`
+          content: `You are a helpful family budget assistant. Keep responses VERY brief (1-2 sentences max). User asked: "${message}"\n\nProvide a friendly, concise response about budgeting or finances.`
         }]
       })
     });
