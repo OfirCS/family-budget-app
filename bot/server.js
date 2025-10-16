@@ -178,29 +178,504 @@ function isOnboardingComplete(data, phoneNumber) {
 }
 
 function startOnboarding(data, phoneNumber) {
-  if (!data.settings) data.settings = { onboardingCompleted: {} };
+  if (!data.settings) data.settings = { onboardingCompleted: {}, onboardingStage: {} };
   if (!data.settings.onboardingCompleted) data.settings.onboardingCompleted = {};
-  data.settings.onboardingCompleted[phoneNumber] = 'name';
+  if (!data.settings.onboardingStage) data.settings.onboardingStage = {};
+
+  data.settings.onboardingStage[phoneNumber] = 'welcome';
   saveData(data);
 
-  return `👋 *Welcome to Family Budget Bot!*\n\nLet me help you set up your budget in just a few steps.\n\n*Step 1: What's your name?*\n\nReply with your name (e.g., "John" or "Sarah")`;
+  return `✨ *Welcome to Family Budget Bot!* ✨\n\n👋 I'm your personal finance assistant!\n\nI'll help you:\n💰 Track expenses effortlessly\n📊 Monitor budgets in real-time\n🔔 Get spending alerts\n👨‍👩‍👧‍👦 Manage family finances together\n\n🚀 *Let's set you up in 3 minutes!*\n\n*Step 1 of 5: What's your name?*\n\nReply with your name (e.g., "Sarah")`;
 }
 
 function processOnboarding(data, phoneNumber, message) {
-  if (!data.settings) data.settings = { onboardingCompleted: {} };
-  if (!data.settings.onboardingCompleted) data.settings.onboardingCompleted = {};
+  if (!data.settings) data.settings = { onboardingCompleted: {}, onboardingStage: {}, onboardingData: {} };
+  if (!data.settings.onboardingStage) data.settings.onboardingStage = {};
+  if (!data.settings.onboardingData) data.settings.onboardingData = {};
 
-  const stage = data.settings.onboardingCompleted[phoneNumber];
+  const stage = data.settings.onboardingStage[phoneNumber];
   const userId = getUserIdForPhoneNumber(data, phoneNumber);
   const currentUser = data.users.find(u => u.id === userId);
+  const msg = message.toLowerCase().trim();
 
-  if (stage === 'name') {
-    // Update user name
-    if (currentUser) {
-      currentUser.name = message.trim();
+  // Welcome stage
+  if (stage === 'welcome') {
+    currentUser.name = message.trim();
+    data.settings.onboardingStage[phoneNumber] = 'categories';
+    saveData(data);
+    return `✅ Nice to meet you, *${currentUser.name}*!\n\n*Step 2 of 5: Budget Categories*\n\nI've set up these default categories:\n🛒 Groceries\n🚗 Transportation\n🎬 Entertainment\n💡 Utilities\n🏥 Healthcare\n📚 Education\n👕 Clothing\n🛍️ Shopping\n💆 Personal Care\n🐾 Pets\n🏠 Home\n\n*Reply:*\n• Type *"ok"* to use defaults\n• Type *"skip"* to customize later in settings`;
+  }
+
+  // Categories stage
+  if (stage === 'categories') {
+    data.settings.onboardingStage[phoneNumber] = 'budget_setup';
+    saveData(data);
+    return `✅ Categories set!\n\n*Step 3 of 5: Monthly Budgets*\n\nLet's set budgets for your top categories. You can always adjust these later!\n\n*How much do you want to budget monthly for:*\n\n🛒 *Groceries?*\n\nReply with amount (e.g., "500" or "skip")`;
+  }
+
+  // Budget setup stage - Groceries
+  if (stage === 'budget_setup') {
+    if (!data.settings.onboardingData[phoneNumber]) {
+      data.settings.onboardingData[phoneNumber] = {};
+    }
+
+    if (msg !== 'skip' && !isNaN(parseFloat(msg))) {
+      const amount = parseFloat(msg);
+      const month = new Date().toISOString().slice(0, 7);
+      const existingBudget = data.budgets.find(b => b.category === 'Groceries' && b.month === month);
+      if (existingBudget) {
+        existingBudget.limit = amount;
+      } else {
+        data.budgets.push({
+          id: Date.now().toString(),
+          category: 'Groceries',
+          limit: amount,
+          month
+        });
+      }
+    }
+
+    data.settings.onboardingStage[phoneNumber] = 'budget_transportation';
+    saveData(data);
+    return `${msg !== 'skip' ? '✅' : '⏭️'} Got it!\n\n🚗 *Transportation?*\n\nReply with amount (e.g., "200" or "skip")`;
+  }
+
+  // Budget setup - Transportation
+  if (stage === 'budget_transportation') {
+    if (msg !== 'skip' && !isNaN(parseFloat(msg))) {
+      const amount = parseFloat(msg);
+      const month = new Date().toISOString().slice(0, 7);
+      const existingBudget = data.budgets.find(b => b.category === 'Transportation' && b.month === month);
+      if (existingBudget) {
+        existingBudget.limit = amount;
+      } else {
+        data.budgets.push({
+          id: Date.now().toString(),
+          category: 'Transportation',
+          limit: amount,
+          month
+        });
+      }
+    }
+
+    data.settings.onboardingStage[phoneNumber] = 'budget_entertainment';
+    saveData(data);
+    return `${msg !== 'skip' ? '✅' : '⏭️'} Perfect!\n\n🎬 *Entertainment?*\n\nReply with amount (e.g., "150" or "skip")`;
+  }
+
+  // Budget setup - Entertainment
+  if (stage === 'budget_entertainment') {
+    if (msg !== 'skip' && !isNaN(parseFloat(msg))) {
+      const amount = parseFloat(msg);
+      const month = new Date().toISOString().slice(0, 7);
+      const existingBudget = data.budgets.find(b => b.category === 'Entertainment' && b.month === month);
+      if (existingBudget) {
+        existingBudget.limit = amount;
+      } else {
+        data.budgets.push({
+          id: Date.now().toString(),
+          category: 'Entertainment',
+          limit: amount,
+          month
+        });
+      }
+    }
+
+    data.settings.onboardingStage[phoneNumber] = 'family_members';
+    saveData(data);
+    return `${msg !== 'skip' ? '✅' : '⏭️'} Awesome!\n\n*Step 4 of 5: Family Members*\n\n👨‍👩‍👧‍👦 Do you want to add other family members?\n\nThis lets you track who spent what!\n\n*Reply:*\n• Type a name to add someone (e.g., "John")\n• Type *"done"* when finished`;
+  }
+
+  // Family members stage
+  if (stage === 'family_members') {
+    if (msg === 'done' || msg === 'skip' || msg === 'no') {
+      data.settings.onboardingStage[phoneNumber] = 'subscriptions';
+      saveData(data);
+      return `✅ Family setup complete!\n\n*Step 5 of 5: Recurring Subscriptions*\n\n🔄 Do you have monthly subscriptions like Netflix, Spotify, gym memberships?\n\n*Reply:*\n• *"yes"* - I'll guide you to add them\n• *"no"* or *"later"* - Skip for now`;
+    } else {
+      // Add family member
+      const newMember = {
+        id: Date.now().toString(),
+        name: message.trim(),
+        color: '#' + Math.floor(Math.random()*16777215).toString(16)
+      };
+      data.users.push(newMember);
+      saveData(data);
+      return `✅ Added *${newMember.name}*!\n\nAdd another member or type *"done"*`;
+    }
+  }
+
+  // Subscriptions stage
+  if (stage === 'subscriptions') {
+    if (msg === 'yes') {
+      data.settings.onboardingStage[phoneNumber] = 'complete';
       data.settings.onboardingCompleted[phoneNumber] = true;
       saveData(data);
-      return `✅ Great! Hi ${currentUser.name}!\n\n🎉 *Setup Complete!*\n\nYou're all set! Here's how to use the bot:\n\n💬 *Log expenses:*\n• "spent $50 on groceries"\n• "20 for gas"\n• "utilities 100"\n\n📊 *Get info:*\n• *budget* - Overview\n• *report* - Detailed analysis\n• *settings* - Manage budgets\n• *help* - All commands\n\n🚀 Try logging your first expense!`;
+      return `🎉 *Setup Complete!*\n\nYou're all set, *${currentUser.name}*!\n\n💡 *Quick Tips:*\n\n📝 *Log expenses:*\n• "spent $50 on groceries"\n• "20 gas"\n• "coffee 5"\n\n📊 *Get insights:*\n• *budget* - Quick overview\n• *report* - Detailed stats\n• *alerts* - Budget warnings\n\n⚙️ *Manage settings:*\n• *settings* - Full settings menu\n• Add subscriptions, budgets & more!\n\n🚀 *Try logging your first expense now!*\n\nType *"settings"* to add subscriptions or type *"help"* anytime for commands.`;
+    } else {
+      data.settings.onboardingStage[phoneNumber] = 'complete';
+      data.settings.onboardingCompleted[phoneNumber] = true;
+      saveData(data);
+      return `🎉 *Setup Complete!*\n\nYou're all set, *${currentUser.name}*!\n\n💡 *Quick Tips:*\n\n📝 *Log expenses:*\n• "spent $50 on groceries"\n• "20 gas"\n• "coffee 5"\n\n📊 *Get insights:*\n• *budget* - Quick overview\n• *report* - Detailed stats\n• *alerts* - Budget warnings\n\n⚙️ *Manage everything:*\n• *settings* - Open settings menu\n\n🚀 *Try logging your first expense now!*`;
+    }
+  }
+
+  return null;
+}
+
+// === SETTINGS MENU HELPERS ===
+function getSettingsMenu() {
+  return `⚙️ *SETTINGS MENU*\n\nWhat would you like to manage?\n\n1️⃣ 📊 *View/Edit Budgets*\n2️⃣ 🔄 *Manage Subscriptions*\n3️⃣ 👥 *Family Members*\n4️⃣ 🏷️ *Categories*\n5️⃣ 💱 *Currency* (Current: USD)\n6️⃣ 🗑️ *Reset All Data*\n7️⃣ ◀️ *Back to Main Menu*\n\n*Reply with a number (1-7) or keyword:*\n• "budgets" or "1"\n• "subscriptions" or "2"\n• "family" or "3"\n• "categories" or "4"\n• "currency" or "5"\n• "reset" or "6"\n• "back" or "7"`;
+}
+
+function processSettings(data, phoneNumber, message) {
+  if (!data.settings) data.settings = { settingsMenu: {} };
+  if (!data.settings.settingsMenu) data.settings.settingsMenu = {};
+
+  const msg = message.toLowerCase().trim();
+  const currentMenu = data.settings.settingsMenu[phoneNumber] || 'main';
+
+  // Main settings menu
+  if (currentMenu === 'main') {
+    if (msg === '1' || msg === 'budgets' || msg === 'budget') {
+      data.settings.settingsMenu[phoneNumber] = 'budgets';
+      saveData(data);
+
+      const month = new Date().toISOString().slice(0, 7);
+      const budgets = data.budgets.filter(b => b.month === month);
+
+      let response = `📊 *BUDGET MANAGEMENT*\n\nCurrent budgets for ${month}:\n\n`;
+      if (budgets.length === 0) {
+        response += `_No budgets set yet_\n\n`;
+      } else {
+        budgets.forEach((b, idx) => {
+          response += `${idx + 1}. *${b.category}*: $${b.limit}\n`;
+        });
+        response += `\n`;
+      }
+
+      response += `*Actions:*\n• Type *"add [category] [amount]"*\n  Example: "add groceries 500"\n• Type *"remove [category]"*\n  Example: "remove groceries"\n• Type *"back"* for settings menu`;
+
+      return response;
+    }
+    else if (msg === '2' || msg === 'subscriptions' || msg === 'subs') {
+      data.settings.settingsMenu[phoneNumber] = 'subscriptions';
+      saveData(data);
+
+      const subs = data.subscriptions || [];
+      const activeSubs = subs.filter(s => s.isActive);
+
+      let response = `🔄 *SUBSCRIPTION MANAGEMENT*\n\n`;
+      if (activeSubs.length === 0) {
+        response += `_No subscriptions yet_\n\n`;
+      } else {
+        activeSubs.forEach((s, idx) => {
+          response += `${idx + 1}. *${s.name}*\n   $${s.amount} ${s.frequency}\n   ${s.category}\n\n`;
+        });
+      }
+
+      response += `*Actions:*\n• *"add [name] [amount] [frequency]"*\n  Example: "add Netflix 15.99 monthly"\n• *"remove [name]"*\n  Example: "remove Netflix"\n• *"back"* for settings menu`;
+
+      return response;
+    }
+    else if (msg === '3' || msg === 'family' || msg === 'members' || msg === 'users') {
+      data.settings.settingsMenu[phoneNumber] = 'family';
+      saveData(data);
+
+      let response = `👥 *FAMILY MEMBERS*\n\n`;
+      data.users.forEach((u, idx) => {
+        response += `${idx + 1}. *${u.name}*\n`;
+      });
+
+      response += `\n*Actions:*\n• Type *"add [name]"*\n  Example: "add John"\n• Type *"remove [name]"*\n  Example: "remove John"\n• Type *"back"* for settings menu`;
+
+      return response;
+    }
+    else if (msg === '4' || msg === 'categories' || msg === 'category') {
+      data.settings.settingsMenu[phoneNumber] = 'categories';
+      saveData(data);
+
+      const categories = data.settings.categories || [];
+      let response = `🏷️ *CATEGORIES*\n\nCurrent categories:\n\n`;
+      categories.forEach((c, idx) => {
+        response += `${idx + 1}. ${c}\n`;
+      });
+
+      response += `\n*Actions:*\n• Type *"add [category]"*\n  Example: "add Gifts"\n• Type *"remove [category]"*\n  Example: "remove Gifts"\n• Type *"back"* for settings menu`;
+
+      return response;
+    }
+    else if (msg === '5' || msg === 'currency') {
+      data.settings.settingsMenu[phoneNumber] = 'currency';
+      saveData(data);
+
+      return `💱 *CURRENCY SETTINGS*\n\nCurrent: *${data.settings.currency || 'USD'}*\n\n*Available currencies:*\n• USD - US Dollar\n• EUR - Euro\n• GBP - British Pound\n• ILS - Israeli Shekel\n• CAD - Canadian Dollar\n\n*Reply with currency code:*\nExample: "USD" or "EUR"\n\nType *"back"* for settings menu`;
+    }
+    else if (msg === '6' || msg === 'reset' || msg.includes('reset')) {
+      data.settings.settingsMenu[phoneNumber] = 'reset_confirm';
+      saveData(data);
+
+      return `🗑️ *RESET ALL DATA*\n\n⚠️ *WARNING!*\n\nThis will permanently delete:\n• All expenses\n• All budgets\n• All subscriptions\n• All family members\n• All settings\n\n*Are you ABSOLUTELY sure?*\n\n• Type *"YES DELETE EVERYTHING"* to confirm\n• Type *"cancel"* to go back\n\n_(This cannot be undone!)_`;
+    }
+    else if (msg === '7' || msg === 'back' || msg === 'exit' || msg === 'cancel') {
+      data.settings.settingsMenu[phoneNumber] = null;
+      saveData(data);
+      return formatMessage('welcome');
+    }
+    else {
+      return getSettingsMenu();
+    }
+  }
+
+  // Budgets submenu
+  if (currentMenu === 'budgets') {
+    if (msg === 'back' || msg === 'exit') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return getSettingsMenu();
+    }
+
+    if (msg.startsWith('add ')) {
+      const parts = msg.substring(4).trim().split(' ');
+      if (parts.length >= 2) {
+        const amount = parseFloat(parts[parts.length - 1]);
+        const category = parts.slice(0, -1).join(' ');
+
+        if (!isNaN(amount)) {
+          const month = new Date().toISOString().slice(0, 7);
+          const categoryCapitalized = category.charAt(0).toUpperCase() + category.slice(1);
+          const existingBudget = data.budgets.find(b =>
+            b.category.toLowerCase() === category.toLowerCase() && b.month === month
+          );
+
+          if (existingBudget) {
+            existingBudget.limit = amount;
+          } else {
+            data.budgets.push({
+              id: Date.now().toString(),
+              category: categoryCapitalized,
+              limit: amount,
+              month
+            });
+          }
+          saveData(data);
+          return `✅ Budget set: *${categoryCapitalized}* = $${amount}\n\nType another command or *"back"*`;
+        }
+      }
+      return `❌ Invalid format. Use: add [category] [amount]\nExample: add groceries 500`;
+    }
+
+    if (msg.startsWith('remove ')) {
+      const category = msg.substring(7).trim();
+      const month = new Date().toISOString().slice(0, 7);
+      const beforeLength = data.budgets.length;
+      data.budgets = data.budgets.filter(b =>
+        !(b.category.toLowerCase() === category.toLowerCase() && b.month === month)
+      );
+
+      if (data.budgets.length < beforeLength) {
+        saveData(data);
+        return `✅ Removed budget for *${category}*\n\nType another command or *"back"*`;
+      } else {
+        return `❌ No budget found for "${category}"\n\nType another command or *"back"*`;
+      }
+    }
+
+    return `❌ Invalid command. Type:\n• "add [category] [amount]"\n• "remove [category]"\n• "back"`;
+  }
+
+  // Subscriptions submenu
+  if (currentMenu === 'subscriptions') {
+    if (msg === 'back' || msg === 'exit') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return getSettingsMenu();
+    }
+
+    if (msg.startsWith('add ')) {
+      const parts = msg.substring(4).trim().split(' ');
+      if (parts.length >= 3) {
+        const frequency = parts[parts.length - 1];
+        const amount = parseFloat(parts[parts.length - 2]);
+        const name = parts.slice(0, -2).join(' ');
+
+        if (!isNaN(amount) && ['monthly', 'weekly', 'yearly'].includes(frequency.toLowerCase())) {
+          if (!data.subscriptions) data.subscriptions = [];
+
+          const newSub = {
+            id: Date.now().toString(),
+            name,
+            amount,
+            category: 'Entertainment', // Default category
+            frequency: frequency.toLowerCase(),
+            isActive: true,
+            startDate: new Date().toISOString().split('T')[0],
+            dayOfMonth: new Date().getDate()
+          };
+
+          data.subscriptions.push(newSub);
+          saveData(data);
+          return `✅ Added subscription: *${name}*\n$${amount} ${frequency}\n\nType another command or *"back"*`;
+        }
+      }
+      return `❌ Invalid format.\nUse: add [name] [amount] [frequency]\nExample: add Netflix 15.99 monthly\n\nFrequency: monthly, weekly, or yearly`;
+    }
+
+    if (msg.startsWith('remove ')) {
+      const name = msg.substring(7).trim();
+      if (!data.subscriptions) data.subscriptions = [];
+      const beforeLength = data.subscriptions.length;
+      data.subscriptions = data.subscriptions.filter(s =>
+        s.name.toLowerCase() !== name.toLowerCase()
+      );
+
+      if (data.subscriptions.length < beforeLength) {
+        saveData(data);
+        return `✅ Removed subscription: *${name}*\n\nType another command or *"back"*`;
+      } else {
+        return `❌ No subscription found: "${name}"\n\nType another command or *"back"*`;
+      }
+    }
+
+    return `❌ Invalid command. Type:\n• "add [name] [amount] [frequency]"\n• "remove [name]"\n• "back"`;
+  }
+
+  // Family submenu
+  if (currentMenu === 'family') {
+    if (msg === 'back' || msg === 'exit') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return getSettingsMenu();
+    }
+
+    if (msg.startsWith('add ')) {
+      const name = msg.substring(4).trim();
+      if (name) {
+        const newUser = {
+          id: Date.now().toString(),
+          name,
+          color: '#' + Math.floor(Math.random()*16777215).toString(16)
+        };
+        data.users.push(newUser);
+        saveData(data);
+        return `✅ Added family member: *${name}*\n\nType another command or *"back"*`;
+      }
+    }
+
+    if (msg.startsWith('remove ')) {
+      const name = msg.substring(7).trim();
+      const beforeLength = data.users.length;
+      data.users = data.users.filter(u => u.name.toLowerCase() !== name.toLowerCase());
+
+      if (data.users.length < beforeLength) {
+        saveData(data);
+        return `✅ Removed family member: *${name}*\n\nType another command or *"back"*`;
+      } else {
+        return `❌ No family member found: "${name}"\n\nType another command or *"back"*`;
+      }
+    }
+
+    return `❌ Invalid command. Type:\n• "add [name]"\n• "remove [name]"\n• "back"`;
+  }
+
+  // Categories submenu
+  if (currentMenu === 'categories') {
+    if (msg === 'back' || msg === 'exit') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return getSettingsMenu();
+    }
+
+    if (msg.startsWith('add ')) {
+      const category = msg.substring(4).trim();
+      if (category) {
+        const categoryCapitalized = category.charAt(0).toUpperCase() + category.slice(1);
+        if (!data.settings.categories) data.settings.categories = [];
+        if (!data.settings.categories.includes(categoryCapitalized)) {
+          data.settings.categories.push(categoryCapitalized);
+          saveData(data);
+          return `✅ Added category: *${categoryCapitalized}*\n\nType another command or *"back"*`;
+        } else {
+          return `❌ Category already exists: "${categoryCapitalized}"\n\nType another command or *"back"*`;
+        }
+      }
+    }
+
+    if (msg.startsWith('remove ')) {
+      const category = msg.substring(7).trim();
+      if (!data.settings.categories) data.settings.categories = [];
+      const beforeLength = data.settings.categories.length;
+      data.settings.categories = data.settings.categories.filter(c =>
+        c.toLowerCase() !== category.toLowerCase()
+      );
+
+      if (data.settings.categories.length < beforeLength) {
+        saveData(data);
+        return `✅ Removed category: *${category}*\n\nType another command or *"back"*`;
+      } else {
+        return `❌ No category found: "${category}"\n\nType another command or *"back"*`;
+      }
+    }
+
+    return `❌ Invalid command. Type:\n• "add [category]"\n• "remove [category]"\n• "back"`;
+  }
+
+  // Currency submenu
+  if (currentMenu === 'currency') {
+    if (msg === 'back' || msg === 'exit') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return getSettingsMenu();
+    }
+
+    const validCurrencies = ['USD', 'EUR', 'GBP', 'ILS', 'CAD'];
+    const currency = msg.toUpperCase();
+
+    if (validCurrencies.includes(currency)) {
+      data.settings.currency = currency;
+      saveData(data);
+      return `✅ Currency changed to *${currency}*\n\n_Note: This only changes the display. Existing expenses remain unchanged._\n\nType *"back"* for settings menu`;
+    } else {
+      return `❌ Invalid currency: "${msg}"\n\nValid options: USD, EUR, GBP, ILS, CAD\n\nType *"back"* for settings menu`;
+    }
+  }
+
+  // Reset confirmation
+  if (currentMenu === 'reset_confirm') {
+    if (msg === 'yes delete everything') {
+      // Reset everything
+      const phoneMapping = data.phoneNumberMapping;
+      const onboardingStatus = data.settings.onboardingCompleted;
+
+      const newData = {
+        users: [{ id: '1', name: 'You', color: '#FF6B6B' }],
+        expenses: [],
+        budgets: [],
+        subscriptions: [],
+        savingsGoals: [],
+        selectedUserId: '1',
+        selectedMonth: new Date().toISOString().slice(0, 7),
+        phoneNumberMapping: phoneMapping,
+        settings: {
+          categories: ['Groceries', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Education', 'Clothing', 'Shopping', 'Personal', 'Pets', 'Home'],
+          currency: 'USD',
+          onboardingCompleted: onboardingStatus,
+          settingsMenu: {}
+        }
+      };
+
+      fs.writeFileSync(dataFile, JSON.stringify(newData, null, 2));
+      data.settings.settingsMenu[phoneNumber] = null;
+
+      return `✅ *All data has been reset!*\n\n🔄 Your account is now fresh and clean.\n\nType *"help"* to see available commands or start logging expenses!`;
+    }
+    else if (msg === 'cancel' || msg === 'back' || msg === 'no') {
+      data.settings.settingsMenu[phoneNumber] = 'main';
+      saveData(data);
+      return `✅ Reset cancelled!\n\n` + getSettingsMenu();
+    }
+    else {
+      return `⚠️ Please confirm by typing:\n*"YES DELETE EVERYTHING"*\n\nOr type *"cancel"* to go back`;
     }
   }
 
@@ -275,8 +750,23 @@ app.post('/whatsapp', async (req, res) => {
     }
   }
 
+  // === SETTINGS MENU CHECK ===
+  // Check if user is in settings menu
+  if (data.settings && data.settings.settingsMenu && data.settings.settingsMenu[senderNumber]) {
+    const settingsResponse = processSettings(data, senderNumber, incomingMessage);
+    if (settingsResponse) {
+      responseMessage = settingsResponse;
+    }
+  }
   // Command routing
-  if (msg === 'help' || msg === 'start' || msg === 'hi' || msg === 'hello') {
+  else if (msg === 'settings' || msg === 'setting' || msg === 'menu') {
+    if (!data.settings) data.settings = { settingsMenu: {} };
+    if (!data.settings.settingsMenu) data.settings.settingsMenu = {};
+    data.settings.settingsMenu[senderNumber] = 'main';
+    saveData(data);
+    responseMessage = getSettingsMenu();
+  }
+  else if (msg === 'help' || msg === 'start' || msg === 'hi' || msg === 'hello') {
     responseMessage = formatMessage('welcome');
   }
   else if (msg.includes('budget') || msg.includes('summary')) {
