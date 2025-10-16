@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { loadState, saveState } from './storage';
-import { AppState, User, Expense, Budget } from './types';
+import { AppState, User, Expense, Budget, Subscription, SavingsGoal } from './types';
 import Dashboard from './components/Dashboard';
 import UserManager from './components/UserManager';
 import Settings from './components/Settings';
+import Subscriptions from './components/Subscriptions';
 import './App.css';
 
 const API_URL = 'http://localhost:3002';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(loadState());
-  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'settings' | 'subscriptions'>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
@@ -188,6 +189,126 @@ const App: React.FC = () => {
     });
   };
 
+  // Subscription handlers
+  const addSubscription = async (subscription: Omit<Subscription, 'id'>) => {
+    const newSubscription: Subscription = {
+      ...subscription,
+      id: Date.now().toString(),
+    };
+
+    setState({
+      ...state,
+      subscriptions: [...(state.subscriptions || []), newSubscription],
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+    } catch (error) {
+      console.log('Could not sync subscription to bot');
+    }
+  };
+
+  const updateSubscription = async (id: string, updates: Partial<Subscription>) => {
+    setState({
+      ...state,
+      subscriptions: (state.subscriptions || []).map(sub =>
+        sub.id === id ? { ...sub, ...updates } : sub
+      ),
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/subscription/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (error) {
+      console.log('Could not update subscription on bot');
+    }
+  };
+
+  const removeSubscription = async (id: string) => {
+    setState({
+      ...state,
+      subscriptions: (state.subscriptions || []).filter(sub => sub.id !== id),
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/subscription/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.log('Could not delete subscription from bot');
+    }
+  };
+
+  // Savings goal handlers
+  const addSavingsGoal = async (goal: Omit<SavingsGoal, 'id'>) => {
+    const newGoal: SavingsGoal = {
+      ...goal,
+      id: Date.now().toString(),
+    };
+
+    setState({
+      ...state,
+      savingsGoals: [...(state.savingsGoals || []), newGoal],
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/savings-goal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goal)
+      });
+    } catch (error) {
+      console.log('Could not sync savings goal to bot');
+    }
+  };
+
+  const updateSavingsGoal = async (id: string, updates: Partial<SavingsGoal>) => {
+    setState({
+      ...state,
+      savingsGoals: (state.savingsGoals || []).map(goal =>
+        goal.id === id ? { ...goal, ...updates } : goal
+      ),
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/savings-goal/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (error) {
+      console.log('Could not update savings goal on bot');
+    }
+  };
+
+  const removeSavingsGoal = async (id: string) => {
+    setState({
+      ...state,
+      savingsGoals: (state.savingsGoals || []).filter(goal => goal.id !== id),
+    });
+
+    // Sync to bot
+    try {
+      await fetch(`${API_URL}/api/savings-goal/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.log('Could not delete savings goal from bot');
+    }
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -205,6 +326,12 @@ const App: React.FC = () => {
             onClick={() => setActiveView('dashboard')}
           >
             📊 Dashboard
+          </button>
+          <button
+            className={`nav-btn ${activeView === 'subscriptions' ? 'active' : ''}`}
+            onClick={() => setActiveView('subscriptions')}
+          >
+            🔄 Subscriptions
           </button>
           <button
             className={`nav-btn ${activeView === 'settings' ? 'active' : ''}`}
@@ -230,6 +357,14 @@ const App: React.FC = () => {
             onSetBudget={setBudget}
             onSetSelectedUser={setSelectedUser}
             onSetSelectedMonth={setSelectedMonth}
+          />
+        )}
+        {activeView === 'subscriptions' && (
+          <Subscriptions
+            subscriptions={state.subscriptions || []}
+            onAddSubscription={addSubscription}
+            onUpdateSubscription={updateSubscription}
+            onRemoveSubscription={removeSubscription}
           />
         )}
         {activeView === 'settings' && (

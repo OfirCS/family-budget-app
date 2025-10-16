@@ -15,6 +15,8 @@ const DEFAULT_STATE: AppState = {
     { id: '3', category: 'Entertainment', limit: 150, month: new Date().toISOString().slice(0, 7) },
     { id: '4', category: 'Utilities', limit: 300, month: new Date().toISOString().slice(0, 7) },
   ],
+  subscriptions: [],
+  savingsGoals: [],
   selectedUserId: '1',
   selectedMonth: new Date().toISOString().slice(0, 7),
 };
@@ -23,7 +25,13 @@ export const loadState = (): AppState => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const loadedState = JSON.parse(stored);
+      // Ensure backward compatibility by adding missing fields
+      return {
+        ...loadedState,
+        subscriptions: loadedState.subscriptions || [],
+        savingsGoals: loadedState.savingsGoals || [],
+      };
     }
   } catch (error) {
     console.error('Failed to load state:', error);

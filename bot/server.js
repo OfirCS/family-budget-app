@@ -51,6 +51,8 @@ function loadData() {
       { id: '3', category: 'Entertainment', limit: 150, month: new Date().toISOString().slice(0, 7) },
       { id: '4', category: 'Utilities', limit: 300, month: new Date().toISOString().slice(0, 7) },
     ],
+    subscriptions: [],
+    savingsGoals: [],
     selectedUserId: '1',
     selectedMonth: new Date().toISOString().slice(0, 7),
     phoneNumberMapping: {}, // Maps phone numbers to user IDs
@@ -156,7 +158,7 @@ function formatMessage(type, data) {
       return `${emojis.error} *Access Denied*\n\nSorry, this bot is for authorized family members only.\n\nContact the bot owner if you believe this is an error.`;
 
     case 'welcome':
-      return `${emojis.success} *Welcome to Family Budget Bot!*\n\n💬 Just tell me what you spent:\n_"spent $50 on groceries"_\n_"20 for gas"_\n_"utilities 100"_\n\n📊 View reports:\n• *budget* - Quick overview\n• *report* - Detailed analysis\n• *alerts* - Budget warnings\n• *help* - All commands`;
+      return `${emojis.success} *Welcome to Family Budget Bot!*\n\n💬 Log expenses:\n_"spent $50 on groceries"_\n_"20 for gas"_\n_"utilities 100"_\n\n📊 Get info:\n• *budget* - Quick overview\n• *report* - Detailed analysis\n• *subscriptions* - View recurring bills\n• *alerts* - Budget warnings\n• *help* - All commands`;
 
     default:
       return data;
@@ -243,6 +245,51 @@ app.post('/whatsapp', async (req, res) => {
       const isCurrent = user.id === userId;
       responseMessage += `${isCurrent ? '→ ' : '  '}*${user.name}*${isCurrent ? ' (you)' : ''}\n`;
     }
+  }
+  else if (msg === 'subscriptions' || msg === 'subs' || msg === 'recurring') {
+    const subs = data.subscriptions || [];
+    const activeSubs = subs.filter(s => s.isActive);
+
+    if (activeSubs.length === 0) {
+      responseMessage = `🔄 *NO SUBSCRIPTIONS*\n\nYou don't have any active subscriptions.\n\nUse the desktop app to add subscriptions like Netflix, Spotify, gym memberships, etc.`;
+    } else {
+      const totalMonthly = activeSubs.reduce((sum, sub) => {
+        if (sub.frequency === 'monthly') return sum + sub.amount;
+        if (sub.frequency === 'weekly') return sum + (sub.amount * 52 / 12);
+        if (sub.frequency === 'yearly') return sum + (sub.amount / 12);
+        return sum;
+      }, 0);
+
+      responseMessage = `🔄 *ACTIVE SUBSCRIPTIONS*\n\n`;
+      responseMessage += `💰 *Total Monthly*: $${totalMonthly.toFixed(2)}\n`;
+      responseMessage += `📊 *Count*: ${activeSubs.length}\n\n`;
+
+      activeSubs.slice(0, 5).forEach(sub => {
+        responseMessage += `• *${sub.name}*\n`;
+        responseMessage += `  $${sub.amount.toFixed(2)} ${sub.frequency}\n`;
+        responseMessage += `  ${sub.category}\n\n`;
+      });
+
+      if (activeSubs.length > 5) {
+        responseMessage += `_...and ${activeSubs.length - 5} more. View all in the desktop app._`;
+      }
+    }
+  }
+  else if (msg.includes('subscription cost') || msg.includes('monthly cost') || msg.includes('recurring cost')) {
+    const subs = data.subscriptions || [];
+    const activeSubs = subs.filter(s => s.isActive);
+    const totalMonthly = activeSubs.reduce((sum, sub) => {
+      if (sub.frequency === 'monthly') return sum + sub.amount;
+      if (sub.frequency === 'weekly') return sum + (sub.amount * 52 / 12);
+      if (sub.frequency === 'yearly') return sum + (sub.amount / 12);
+      return sum;
+    }, 0);
+    const totalYearly = totalMonthly * 12;
+
+    responseMessage = `💰 *SUBSCRIPTION COSTS*\n\n`;
+    responseMessage += `📅 *Monthly*: $${totalMonthly.toFixed(2)}\n`;
+    responseMessage += `📆 *Yearly*: $${totalYearly.toFixed(2)}\n`;
+    responseMessage += `📊 *Active Subs*: ${activeSubs.length}`;
   }
   else {
     // Try to parse as an expense
@@ -399,6 +446,183 @@ app.post('/api/user', (req, res) => {
   saveData(data);
   res.json({ success: true, user: newUser });
 });
+
+// === SUBSCRIPTION ENDPOINTS ===
+app.get('/api/subscriptions', (req, res) => {
+  const data = loadData();
+  res.json(data.subscriptions || []);
+});
+
+app.post('/api/subscription', (req, res) => {
+  const { name, amount, category, frequency, dayOfMonth, dayOfWeek, monthOfYear, startDate, endDate } = req.body;
+
+  if (!name || !amount || !category || !frequency) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const data = loadData();
+  if (!data.subscriptions) data.subscriptions = [];
+
+  const newSubscription = {
+    id: Date.now().toString(),
+    name,
+    amount: parseFloat(amount),
+    category,
+    frequency,
+    isActive: true,
+    startDate: startDate || new Date().toISOString().split('T')[0],
+  };
+
+  if (dayOfMonth !== undefined) newSubscription.dayOfMonth = parseInt(dayOfMonth);
+  if (dayOfWeek !== undefined) newSubscription.dayOfWeek = parseInt(dayOfWeek);
+  if (monthOfYear !== undefined) newSubscription.monthOfYear = parseInt(monthOfYear);
+  if (endDate) newSubscription.endDate = endDate;
+
+  data.subscriptions.push(newSubscription);
+  saveData(data);
+  res.json({ success: true, subscription: newSubscription });
+});
+
+app.put('/api/subscription/:id', (req, res) => {
+  const data = loadData();
+  if (!data.subscriptions) data.subscriptions = [];
+
+  const index = data.subscriptions.findIndex(s => s.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Subscription not found' });
+  }
+
+  data.subscriptions[index] = {
+    ...data.subscriptions[index],
+    ...req.body
+  };
+
+  saveData(data);
+  res.json({ success: true, subscription: data.subscriptions[index] });
+});
+
+app.delete('/api/subscription/:id', (req, res) => {
+  const data = loadData();
+  if (!data.subscriptions) data.subscriptions = [];
+
+  data.subscriptions = data.subscriptions.filter(s => s.id !== req.params.id);
+  saveData(data);
+  res.json({ success: true });
+});
+
+// === SAVINGS GOALS ENDPOINTS ===
+app.get('/api/savings-goals', (req, res) => {
+  const data = loadData();
+  res.json(data.savingsGoals || []);
+});
+
+app.post('/api/savings-goal', (req, res) => {
+  const { name, targetAmount, currentAmount, targetDate, category } = req.body;
+
+  if (!name || !targetAmount || !targetDate) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const data = loadData();
+  if (!data.savingsGoals) data.savingsGoals = [];
+
+  const newGoal = {
+    id: Date.now().toString(),
+    name,
+    targetAmount: parseFloat(targetAmount),
+    currentAmount: parseFloat(currentAmount) || 0,
+    targetDate,
+    category: category || undefined
+  };
+
+  data.savingsGoals.push(newGoal);
+  saveData(data);
+  res.json({ success: true, goal: newGoal });
+});
+
+app.put('/api/savings-goal/:id', (req, res) => {
+  const data = loadData();
+  if (!data.savingsGoals) data.savingsGoals = [];
+
+  const index = data.savingsGoals.findIndex(g => g.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Savings goal not found' });
+  }
+
+  data.savingsGoals[index] = {
+    ...data.savingsGoals[index],
+    ...req.body
+  };
+
+  saveData(data);
+  res.json({ success: true, goal: data.savingsGoals[index] });
+});
+
+app.delete('/api/savings-goal/:id', (req, res) => {
+  const data = loadData();
+  if (!data.savingsGoals) data.savingsGoals = [];
+
+  data.savingsGoals = data.savingsGoals.filter(g => g.id !== req.params.id);
+  saveData(data);
+  res.json({ success: true });
+});
+
+// === SUBSCRIPTION PROCESSOR ===
+// Process subscriptions and generate expenses
+function processSubscriptions() {
+  const data = loadData();
+  if (!data.subscriptions) return;
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  let newExpensesCount = 0;
+
+  for (const sub of data.subscriptions) {
+    if (!sub.isActive) continue;
+
+    // Check if already processed today
+    if (sub.lastProcessed === todayStr) continue;
+
+    // Check if subscription should be processed
+    let shouldProcess = false;
+
+    if (sub.frequency === 'monthly' && sub.dayOfMonth) {
+      shouldProcess = today.getDate() === sub.dayOfMonth;
+    } else if (sub.frequency === 'weekly' && sub.dayOfWeek !== undefined) {
+      shouldProcess = today.getDay() === sub.dayOfWeek;
+    } else if (sub.frequency === 'yearly' && sub.monthOfYear && sub.dayOfMonth) {
+      shouldProcess = today.getMonth() + 1 === sub.monthOfYear && today.getDate() === sub.dayOfMonth;
+    }
+
+    if (shouldProcess) {
+      // Create expense
+      const newExpense = {
+        id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
+        userId: data.selectedUserId || data.users[0].id,
+        amount: sub.amount,
+        category: sub.category,
+        description: `${sub.name} (Subscription)`,
+        date: todayStr,
+        isRecurring: true,
+        subscriptionId: sub.id
+      };
+
+      data.expenses.push(newExpense);
+      sub.lastProcessed = todayStr;
+      newExpensesCount++;
+    }
+  }
+
+  if (newExpensesCount > 0) {
+    saveData(data);
+    console.log(`✅ Processed ${newExpensesCount} subscription(s)`);
+  }
+}
+
+// Run subscription processor every hour
+setInterval(processSubscriptions, 60 * 60 * 1000);
+// Also run on startup
+setTimeout(processSubscriptions, 5000);
 
 const PORT = process.env.PORT || 3002;
 const HOST = '0.0.0.0'; // Railway requires binding to 0.0.0.0
