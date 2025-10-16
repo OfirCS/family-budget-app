@@ -56,6 +56,11 @@ function loadData() {
     selectedUserId: '1',
     selectedMonth: new Date().toISOString().slice(0, 7),
     phoneNumberMapping: {}, // Maps phone numbers to user IDs
+    settings: {
+      categories: ['Groceries', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Education', 'Clothing', 'Shopping', 'Personal', 'Pets', 'Home'],
+      currency: 'USD',
+      onboardingCompleted: {}  // Maps phone numbers to onboarding status
+    }
   };
 }
 
@@ -158,11 +163,48 @@ function formatMessage(type, data) {
       return `${emojis.error} *Access Denied*\n\nSorry, this bot is for authorized family members only.\n\nContact the bot owner if you believe this is an error.`;
 
     case 'welcome':
-      return `${emojis.success} *Welcome to Family Budget Bot!*\n\n💬 Log expenses:\n_"spent $50 on groceries"_\n_"20 for gas"_\n_"utilities 100"_\n\n📊 Get info:\n• *budget* - Quick overview\n• *report* - Detailed analysis\n• *subscriptions* - View recurring bills\n• *alerts* - Budget warnings\n• *help* - All commands`;
+      return `${emojis.success} *Welcome to Family Budget Bot!*\n\n💬 Log expenses:\n_"spent $50 on groceries"_\n_"20 for gas"_\n_"utilities 100"_\n\n📊 Get info:\n• *budget* - Quick overview\n• *report* - Detailed analysis\n• *settings* - Manage budgets\n• *subscriptions* - View recurring bills\n• *alerts* - Budget warnings\n• *help* - All commands`;
 
     default:
       return data;
   }
+}
+
+// === ONBOARDING HELPERS ===
+function isOnboardingComplete(data, phoneNumber) {
+  if (!data.settings) data.settings = { onboardingCompleted: {} };
+  if (!data.settings.onboardingCompleted) data.settings.onboardingCompleted = {};
+  return data.settings.onboardingCompleted[phoneNumber] === true;
+}
+
+function startOnboarding(data, phoneNumber) {
+  if (!data.settings) data.settings = { onboardingCompleted: {} };
+  if (!data.settings.onboardingCompleted) data.settings.onboardingCompleted = {};
+  data.settings.onboardingCompleted[phoneNumber] = 'name';
+  saveData(data);
+
+  return `👋 *Welcome to Family Budget Bot!*\n\nLet me help you set up your budget in just a few steps.\n\n*Step 1: What's your name?*\n\nReply with your name (e.g., "John" or "Sarah")`;
+}
+
+function processOnboarding(data, phoneNumber, message) {
+  if (!data.settings) data.settings = { onboardingCompleted: {} };
+  if (!data.settings.onboardingCompleted) data.settings.onboardingCompleted = {};
+
+  const stage = data.settings.onboardingCompleted[phoneNumber];
+  const userId = getUserIdForPhoneNumber(data, phoneNumber);
+  const currentUser = data.users.find(u => u.id === userId);
+
+  if (stage === 'name') {
+    // Update user name
+    if (currentUser) {
+      currentUser.name = message.trim();
+      data.settings.onboardingCompleted[phoneNumber] = true;
+      saveData(data);
+      return `✅ Great! Hi ${currentUser.name}!\n\n🎉 *Setup Complete!*\n\nYou're all set! Here's how to use the bot:\n\n💬 *Log expenses:*\n• "spent $50 on groceries"\n• "20 for gas"\n• "utilities 100"\n\n📊 *Get info:*\n• *budget* - Overview\n• *report* - Detailed analysis\n• *settings* - Manage budgets\n• *help* - All commands\n\n🚀 Try logging your first expense!`;
+    }
+  }
+
+  return null;
 }
 
 // === MAIN WEBHOOK ===
@@ -198,6 +240,40 @@ app.post('/whatsapp', async (req, res) => {
 
   let responseMessage = '';
   const msg = incomingMessage.toLowerCase().trim();
+
+  // === ONBOARDING CHECK ===
+  if (!isOnboardingComplete(data, senderNumber)) {
+    // Check if starting fresh
+    if (msg === 'start' || msg === 'help' || msg === 'hi' || msg === 'hello') {
+      responseMessage = startOnboarding(data, senderNumber);
+    } else {
+      const onboardingResponse = processOnboarding(data, senderNumber, incomingMessage);
+      if (onboardingResponse) {
+        responseMessage = onboardingResponse;
+      } else {
+        // Skip onboarding if user sends other commands
+        data.settings.onboardingCompleted[senderNumber] = true;
+        saveData(data);
+        // Continue to normal command processing below
+      }
+    }
+
+    // Send onboarding response and exit
+    if (responseMessage) {
+      if (twilioClient) {
+        try {
+          await twilioClient.messages.create({
+            body: responseMessage,
+            from: twilioNumber,
+            to: senderNumber,
+          });
+        } catch (error) {
+          console.error('Error:', error.message);
+        }
+      }
+      return res.status(200).send('OK');
+    }
+  }
 
   // Command routing
   if (msg === 'help' || msg === 'start' || msg === 'hi' || msg === 'hello') {
