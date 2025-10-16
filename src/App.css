@@ -28,6 +28,12 @@ body {
   align-items: center;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 .header h1 {
   margin: 0;
   font-size: 2rem;
@@ -37,6 +43,17 @@ body {
   background-clip: text;
   font-weight: 700;
   letter-spacing: -0.5px;
+}
+
+.sync-status {
+  font-size: 0.85rem;
+  background: rgba(72, 187, 120, 0.2);
+  color: #48bb78;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  font-weight: 500;
+  border: 1px solid rgba(72, 187, 120, 0.3);
 }
 
 .nav {
