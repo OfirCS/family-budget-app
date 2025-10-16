@@ -1,217 +1,266 @@
-# WhatsApp-Only Family Budget Bot
+# Family Budget Bot 💰
 
-This is a WhatsApp-based family budget app that runs entirely through WhatsApp messages. No desktop app needed!
+A WhatsApp-based family budget management bot powered by Twilio and Claude AI. Track expenses, manage budgets, and collaborate with family members all through WhatsApp.
 
 ## Features
 
-- **WhatsApp Interface**: Manage your entire budget through WhatsApp messages
-- **Onboarding Flow**: Automatic setup for new users
-- **Settings Commands**: Configure budgets directly via WhatsApp
-- **Expense Tracking**: Log expenses with natural language
-- **Budget Monitoring**: Real-time budget alerts and reports
-- **Multi-user Support**: Track spending by family member
-- **AI Assistant**: Claude 3.5 Haiku for smart responses (cost-effective!)
+### 📱 WhatsApp Integration
+- Send expense updates via WhatsApp messages
+- Receive instant budget summaries and alerts
+- Interactive settings menu
+- Natural language expense parsing
 
-## Cost-Effective AI
+### 💰 Expense Tracking
+- Log expenses with descriptions
+- Categorize spending automatically
+- Track spending by family member
+- Monthly expense history
 
-The bot uses **Claude 3.5 Haiku** - the most affordable Claude model:
-- Input: $0.80 per 1M tokens
-- Output: $4.00 per 1M tokens
-- Max 150 tokens per response
-- Estimated cost: ~$0.00016 per AI response
+### 📊 Budget Management
+- Set and manage monthly budgets by category
+- Real-time budget tracking
+- Budget alerts when approaching limits
+- Spending analytics and reports
 
-## Quick Start
+### 👥 Family Collaboration
+- Add multiple family members
+- Track who spent what
+- View family spending patterns
+- Shared budget oversight
 
-### 1. Install Dependencies
+### 🔄 Subscription Management
+- Add and track recurring subscriptions
+- Monthly cost calculations
+- Subscription alerts
+- Manage Netflix, Spotify, gym memberships, etc.
 
+### 🤖 AI Assistance
+- Claude AI for financial advice
+- Natural language expense interpretation
+- Budget recommendations
+- Smart categorization
+
+## Setup
+
+### Prerequisites
+- Node.js v14+
+- Twilio account with WhatsApp enabled
+- Anthropic API key (for Claude AI)
+- GitHub account (for deployment)
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/your-username/family-budget-app.git
+cd family-budget-app
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-### 2. Configure Environment
-
-Create a `.env` file with your credentials:
-
-```
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
-TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-ANTHROPIC_API_KEY=your_claude_api_key
-PORT=3002
-ALLOWED_PHONE_NUMBERS=whatsapp:+1234567890,whatsapp:+0987654321
+3. **Configure environment variables**
+```bash
+cp .env.example .env
 ```
 
-### 3. Start the Bot
+4. **Edit `.env` with your credentials**
+```
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_WHATSAPP_NUMBER=whatsapp:+1234567890
+ANTHROPIC_API_KEY=your_api_key
+PORT=3001
+```
+
+### Running Locally
 
 ```bash
+npm start
+# or
 npm run bot
 ```
 
-## WhatsApp Commands
+The server will start on port 3001 (or your configured PORT).
 
-### Getting Started
-- **start** or **hi** - Begin onboarding (first-time users)
-- **help** - Show all commands
+## Usage
 
 ### Logging Expenses
-Send natural language messages:
+Send messages like:
 - "spent $50 on groceries"
 - "20 for gas"
 - "utilities 100"
 
-### Budget Commands
-- **budget** or **summary** - Monthly budget overview
-- **settings** - View all budget limits
-- **set groceries 600** - Update budget for a category
-- **report** or **detailed** - Full spending analysis
+### Available Commands
+- **budget** - Quick budget overview
+- **report** - Detailed spending analysis
 - **alerts** - Budget warnings
-- **status** or **quick** - Quick stats
+- **top** - Top spending categories
+- **who** - Family spending breakdown
+- **subscriptions** - View active subscriptions
+- **status** - Quick financial status
+- **settings** - Open settings menu
+- **help** - List all commands
 
-### Family & Spending
-- **who** or **family** - Family spending breakdown
-- **users** - List all family members
-- **top** - Top 3 spending categories
+### Settings Menu
+Access with `/settings` command:
+1. View/Edit Budgets
+2. Manage Subscriptions
+3. Family Members
+4. Categories
+5. Currency Settings
+6. Reset All Data
 
-### Subscriptions
-- **subscriptions** or **subs** - View recurring bills
-- **subscription cost** - Monthly/yearly subscription totals
+## API Endpoints
 
-## Settings via WhatsApp
+### Health Check
+```
+GET /health
+```
 
-### View Current Budgets
-Send: `settings`
+### Data Management
+```
+GET /api/data                    # Get all data
+GET /api/expenses               # List expenses
+GET /api/budgets                # List budgets
+GET /api/users                  # List family members
+GET /api/subscriptions          # List subscriptions
+GET /api/savings-goals          # List savings goals
+```
 
-Response shows all category budgets for the current month.
+### Create/Update Resources
+```
+POST /api/expense               # Add expense
+POST /api/budget                # Create budget
+POST /api/user                  # Add family member
+POST /api/subscription          # Add subscription
+POST /api/savings-goal          # Add savings goal
+```
 
-### Update a Budget
-Send: `set <category> <amount>`
+### WebHook
+```
+POST /whatsapp                  # Twilio WhatsApp webhook
+```
 
-Examples:
-- `set groceries 600` - Update Groceries budget to $600
-- `set transportation 250` - Update Transportation to $250
+## Deployment
 
-### Available Categories
-- Groceries
-- Transportation
-- Entertainment
-- Utilities
-- Healthcare
-- Education
-- Clothing
-- Shopping
-- Personal
-- Pets
-- Home
+### Deploy to Railway
 
-## Onboarding Flow
+1. **Push to GitHub**
+```bash
+git add .
+git commit -m "Add README and updates"
+git push origin main
+```
 
-New users automatically go through setup:
+2. **Connect to Railway**
+   - Go to railway.app
+   - Create new project
+   - Connect GitHub repository
+   - Set environment variables
+   - Deploy
 
-1. **Name Setup**: "What's your name?"
-   - Reply with your name (e.g., "John")
-
-2. **Ready to Use**: Bot confirms setup complete
-
-3. **Start Tracking**: Log your first expense!
+### Environment Variables for Production
+```
+TWILIO_ACCOUNT_SID=your_production_sid
+TWILIO_AUTH_TOKEN=your_production_token
+TWILIO_WHATSAPP_NUMBER=whatsapp:+your_number
+ANTHROPIC_API_KEY=your_api_key
+PORT=3001
+```
 
 ## Data Storage
 
-All data is stored in `bot-data.json`:
+The app uses a JSON file (`bot-data.json`) for data persistence:
 - Users and family members
-- Expenses with categories
-- Budget limits (editable)
-- Subscriptions
-- Settings and onboarding status
-- Phone number mappings
+- Expenses and budgets
+- Subscriptions and savings goals
+- Settings and preferences
 
-Everything is JSON - easily editable and portable!
-
-## Running in Production
-
-### Option 1: Railway
-
-1. Connect your GitHub repo to Railway
-2. Add environment variables in Railway dashboard
-3. Deploy - Railway will use the `Procfile`
-
-### Option 2: Other Platforms
-
-The bot runs on any Node.js host:
-
-```bash
-node bot/server.js
-```
-
-Ensure your host:
-- Supports webhooks (public URL)
-- Can bind to 0.0.0.0
-- Has Node.js 16+
-
-## Removed Features
-
-This version has **removed Electron** completely:
-- No desktop app
-- No React UI
-- WhatsApp is the only interface
-- Simpler, cheaper, more accessible!
-
-## Architecture
+## Project Structure
 
 ```
-WhatsApp → Twilio → Bot Server → bot-data.json
-                 ↓
-            Claude AI (optional)
+family-budget-app/
+├── bot/
+│   ├── server.js           # Main Express server
+│   ├── nlp.js              # NLP parsing & budget summary
+│   └── analytics.js        # Analytics & reporting
+├── bot-data.json           # Data storage
+├── package.json            # Dependencies
+├── .env                    # Environment variables
+├── .env.example            # Example env file
+├── Procfile                # Railway/Heroku configuration
+└── README.md               # This file
 ```
 
-## Security
+## Technology Stack
 
-- Phone number whitelist via `ALLOWED_PHONE_NUMBERS`
-- Environment variables for credentials
-- No exposed API keys in code
+- **Backend**: Node.js & Express
+- **API**: Anthropic Claude AI
+- **Messaging**: Twilio WhatsApp
+- **Storage**: JSON file system
+- **Deployment**: Railway/Heroku
 
-## Development
+## Features Coming Soon
 
-Run bot only (no React):
+- [ ] Web dashboard for analytics
+- [ ] Database integration (MongoDB/PostgreSQL)
+- [ ] Bill splitting calculator
+- [ ] Savings goals tracking
+- [ ] Export to CSV/PDF
+- [ ] Multi-language support
+- [ ] Mobile app
+- [ ] Voice commands
 
-```bash
-npm run bot
-```
+## Contributing
 
-## Troubleshooting
-
-### Bot not responding
-- Check Twilio webhook URL is correct
-- Verify `TWILIO_WHATSAPP_NUMBER` format
-- Check phone number is in `ALLOWED_PHONE_NUMBERS`
-
-### Claude AI not working
-- Verify `ANTHROPIC_API_KEY` is set
-- Check API key is valid
-- Bot will fall back to simple responses if Claude fails
-
-### Data not saving
-- Check bot has write permissions for `bot-data.json`
-- Verify JSON is not corrupted
-- Check console for errors
-
-## Cost Breakdown
-
-**Monthly Costs** (assuming 100 messages/day):
-
-- Twilio WhatsApp: ~$0.005 per message = $15/month
-- Claude 3.5 Haiku: ~$0.00016 per response = $0.48/month
-- Hosting (Railway free tier): $0/month
-
-**Total**: ~$15-20/month
-
-## Support
-
-For issues:
-1. Check console logs
-2. Verify `.env` configuration
-3. Test with `curl http://localhost:3002/health`
-4. Review Twilio webhook logs
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For issues and questions:
+- Create an issue on GitHub
+- WhatsApp the bot for help with usage
+- Check the FAQ section below
+
+## FAQ
+
+**Q: How do I reset all my data?**
+A: Use settings menu and select "Reset All Data" (option 6)
+
+**Q: Can I change the currency?**
+A: Yes, go to settings > Currency Settings
+
+**Q: How are expenses categorized?**
+A: The bot uses natural language processing to auto-categorize, or you can specify the category directly.
+
+**Q: Can I use this for a business?**
+A: Yes! You can add multiple users and track spending by team member.
+
+**Q: What if I don't have WhatsApp?**
+A: You can use the REST API endpoints with any HTTP client.
+
+## Changelog
+
+### v1.0.0 (October 2025)
+- Initial release
+- WhatsApp integration
+- Budget tracking
+- Expense logging
+- Family collaboration
+- Claude AI integration
+- Subscription management
+
+---
+
+Made with ❤️ for family finances
