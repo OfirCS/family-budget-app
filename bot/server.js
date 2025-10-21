@@ -24,10 +24,20 @@ const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 const ALLOWED_NUMBERS = (process.env.ALLOWED_PHONE_NUMBERS || '').split(',').map(n => n.trim()).filter(n => n);
 
 let twilioClient = null;
-if (accountSid && authToken && authToken !== 'your_auth_token') {
+// Only initialize Twilio if valid credentials are provided
+const hasValidCredentials = accountSid &&
+                            authToken &&
+                            accountSid.startsWith('AC') &&
+                            authToken !== 'your_auth_token_here';
+
+if (hasValidCredentials) {
   twilioClient = twilio(accountSid, authToken);
   console.log('✅ Twilio WhatsApp bot connected!');
   console.log('🔒 Authenticated users:', ALLOWED_NUMBERS.length > 0 ? ALLOWED_NUMBERS.length : 'NONE (open access)');
+} else {
+  console.log('⚠️  Running in DEMO MODE - Twilio not configured');
+  console.log('   API endpoints are available for testing');
+  console.log('   Set valid TWILIO credentials in .env to enable WhatsApp');
 }
 
 // === DATA MANAGEMENT ===
